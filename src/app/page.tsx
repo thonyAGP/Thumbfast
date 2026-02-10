@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Download, Loader2, RotateCcw, Sparkles } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { ChevronLeft, ChevronRight, Download, Loader2, RotateCcw, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -50,9 +50,32 @@ export default function Home() {
   const [blend, setBlend] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([])
-  const [previewIndex, setPreviewIndex] = useState<number | null>(null)
+  const [previewImages, setPreviewImages] = useState<GeneratedImage[]>([])
+  const [previewIndex, setPreviewIndex] = useState(0)
   const { stats, trackGeneration, resetStats } = useGenerationStats()
   const history = useHistory()
+
+  const openPreview = (images: GeneratedImage[], index: number) => {
+    setPreviewImages(images)
+    setPreviewIndex(index)
+  }
+
+  const closePreview = () => setPreviewImages([])
+
+  const handlePreviewKey = useCallback(
+    (e: KeyboardEvent) => {
+      if (previewImages.length <= 1) return
+      if (e.key === "ArrowRight") setPreviewIndex((i) => (i + 1) % previewImages.length)
+      if (e.key === "ArrowLeft") setPreviewIndex((i) => (i - 1 + previewImages.length) % previewImages.length)
+    },
+    [previewImages.length]
+  )
+
+  useEffect(() => {
+    if (previewImages.length === 0) return
+    window.addEventListener("keydown", handlePreviewKey)
+    return () => window.removeEventListener("keydown", handlePreviewKey)
+  }, [previewImages.length, handlePreviewKey])
 
   const toggleMode = (id: OutputMode) => {
     setModes((prev) =>
@@ -332,7 +355,7 @@ export default function Home() {
                     src={`data:${img.mediaType};base64,${img.data}`}
                     alt={`Generated thumbnail ${index + 1}`}
                     className="aspect-video w-full cursor-pointer object-cover"
-                    onClick={() => setPreviewIndex(index)}
+                    onClick={() => openPreview(generatedImages, index)}
                   />
                   <Button
                     size="icon-sm"
@@ -352,32 +375,59 @@ export default function Home() {
 
         {/* Image Preview Dialog */}
         <Dialog
-          open={previewIndex !== null}
-          onOpenChange={(open) => !open && setPreviewIndex(null)}
+          open={previewImages.length > 0}
+          onOpenChange={(open) => !open && closePreview()}
         >
           <DialogContent className="max-w-4xl border-none bg-transparent p-0 shadow-none">
-            {previewIndex !== null && generatedImages[previewIndex] && (
+            {previewImages[previewIndex] && (
               <div className="flex flex-col items-center gap-3">
-                <img
-                  src={`data:${generatedImages[previewIndex].mediaType};base64,${generatedImages[previewIndex].data}`}
-                  alt={`Preview thumbnail ${previewIndex + 1}`}
-                  className="w-full rounded-lg"
-                />
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="gap-2"
-                  onClick={() =>
-                    downloadImage(
-                      generatedImages[previewIndex].data,
-                      generatedImages[previewIndex].mediaType,
-                      previewIndex
-                    )
-                  }
-                >
-                  <Download className="size-4" />
-                  Download
-                </Button>
+                <div className="relative w-full">
+                  <img
+                    src={`data:${previewImages[previewIndex].mediaType};base64,${previewImages[previewIndex].data}`}
+                    alt={`Preview ${previewIndex + 1}`}
+                    className="w-full rounded-lg"
+                  />
+                  {previewImages.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewIndex((i) => (i - 1 + previewImages.length) % previewImages.length)}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 flex size-10 items-center justify-center rounded-full bg-black/60 text-white transition-opacity hover:bg-black/80"
+                      >
+                        <ChevronLeft className="size-6" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewIndex((i) => (i + 1) % previewImages.length)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 flex size-10 items-center justify-center rounded-full bg-black/60 text-white transition-opacity hover:bg-black/80"
+                      >
+                        <ChevronRight className="size-6" />
+                      </button>
+                    </>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  {previewImages.length > 1 && (
+                    <span className="text-xs text-white/70">
+                      {previewIndex + 1} / {previewImages.length}
+                    </span>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="gap-2"
+                    onClick={() =>
+                      downloadImage(
+                        previewImages[previewIndex].data,
+                        previewImages[previewIndex].mediaType,
+                        previewIndex
+                      )
+                    }
+                  >
+                    <Download className="size-4" />
+                    Download
+                  </Button>
+                </div>
               </div>
             )}
           </DialogContent>
@@ -389,6 +439,7 @@ export default function Home() {
           onRestore={restoreFromHistory}
           onRemove={history.remove}
           onClear={history.clear}
+          onPreview={(images, index) => openPreview(images, index)}
         />
 
         {/* Cost Tracker */}

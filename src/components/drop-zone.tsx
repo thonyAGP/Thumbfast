@@ -74,12 +74,40 @@ export const DropZone = ({
     }
   }
 
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      const items = e.clipboardData?.items
+      if (!items) return
+
+      const imageFiles: File[] = []
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile()
+          if (file) imageFiles.push(file)
+        }
+      }
+      if (imageFiles.length > 0) {
+        e.stopPropagation()
+        e.preventDefault()
+        processFiles(imageFiles)
+      }
+    },
+    [processFiles]
+  )
+
+  const zoneRef = useRef<HTMLDivElement>(null)
+
   const removeImage = (index: number) => {
     onImagesChange(images.filter((_, i) => i !== index))
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div
+      ref={zoneRef}
+      className="flex flex-col gap-2 outline-none focus-within:ring-1 focus-within:ring-ring/30 rounded-lg"
+      tabIndex={0}
+      onPaste={handlePaste}
+    >
       <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
@@ -129,7 +157,7 @@ export const DropZone = ({
         >
           <ImagePlus className="size-5 text-muted-foreground" />
           <span className="text-xs text-muted-foreground">
-            Drop or click
+            Drop, click or paste
           </span>
         </button>
       )}

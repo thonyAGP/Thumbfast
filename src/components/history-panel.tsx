@@ -58,6 +58,7 @@ interface HistoryPanelProps {
   onRestore: (entry: HistoryEntry) => void
   onRemove: (id: string) => void
   onClear: () => void
+  onPreview: (images: { data: string; mediaType: string }[], index: number) => void
 }
 
 export const HistoryPanel = ({
@@ -65,6 +66,7 @@ export const HistoryPanel = ({
   onRestore,
   onRemove,
   onClear,
+  onPreview,
 }: HistoryPanelProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -124,7 +126,7 @@ export const HistoryPanel = ({
                     />
                   )}
                   <div className="flex flex-1 flex-col gap-1 min-w-0">
-                    <p className="text-sm truncate">{entry.prompt}</p>
+                    <p className="text-sm truncate" title={entry.prompt}>{entry.prompt}</p>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-muted-foreground shrink-0">
                         {formatDate(entry.timestamp)}
@@ -146,7 +148,8 @@ export const HistoryPanel = ({
                           <img
                             src={`data:${img.mediaType};base64,${img.data}`}
                             alt={`History ${i + 1}`}
-                            className="w-full rounded object-cover aspect-video"
+                            className="w-full rounded object-cover aspect-video cursor-pointer"
+                            onClick={() => onPreview(entry.images, i)}
                           />
                           <Button
                             size="icon-sm"

@@ -120,7 +120,16 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+  }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Prevent Radix Dialog from shifting layout when removing scrollbar */
+  body[data-scroll-locked] {
+    margin-right: 0 !important;
+    overflow-y: scroll !important;
   }
 }
