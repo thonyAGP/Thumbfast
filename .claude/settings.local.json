@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(pnpm build:*)",
+      "WebSearch",
+      "Bash(pnpm dev)",
+      "Bash(powershell -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Where-Object { $_CommandLine -match ''next dev'' } | Stop-Process -Force\")",
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(npx shadcn@latest add:*)"
+    ]
+  }
+}
