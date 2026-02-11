@@ -128,6 +128,11 @@ const buildPrompt = (
 };
 
 export async function POST(req: Request) {
+  const password = req.headers.get("x-access-password");
+  if (!password || password !== process.env.ACCESS_PASSWORD) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const {
     prompt,
     extraImages = [],

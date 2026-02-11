@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { ChevronLeft, ChevronRight, Download, Loader2, RotateCcw, Sparkles } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download, Loader2, Lock, RotateCcw, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -38,7 +38,36 @@ const downloadImage = (data: string, mediaType: string, index: number) => {
   link.click()
 }
 
+const PASSWORD_KEY = "thumbfast-access"
+
 export default function Home() {
+  const [accessPassword, setAccessPassword] = useState("")
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [passwordInput, setPasswordInput] = useState("")
+  const [authError, setAuthError] = useState(false)
+
+  useEffect(() => {
+    const stored = localStorage.getItem(PASSWORD_KEY)
+    if (stored) {
+      setAccessPassword(stored)
+      setIsAuthenticated(true)
+    }
+  }, [])
+
+  const handleLogin = () => {
+    if (!passwordInput.trim()) return
+    localStorage.setItem(PASSWORD_KEY, passwordInput.trim())
+    setAccessPassword(passwordInput.trim())
+    setIsAuthenticated(true)
+    setAuthError(false)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem(PASSWORD_KEY)
+    setAccessPassword("")
+    setIsAuthenticated(false)
+  }
+
   const [prompt, setPrompt] = useState("")
   const [extraImages, setExtraImages] = useState<string[]>([])
   const [inspiration, setInspiration] = useState<string[]>([])
@@ -109,7 +138,10 @@ export default function Home() {
     try {
       const response = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-password": accessPassword,
+        },
         body: JSON.stringify({
           prompt: prompt.trim(),
           extraImages,
@@ -125,6 +157,11 @@ export default function Home() {
 
       if (!response.ok) {
         const error = await response.json()
+        if (response.status === 401) {
+          handleLogout()
+          toast.error("Invalid password. Please log in again.")
+          return
+        }
         throw new Error(error.error ?? "Generation failed")
       }
 
@@ -157,6 +194,38 @@ export default function Home() {
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background bg-[url('/bg.png')] bg-cover bg-center bg-fixed bg-no-repeat flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6 rounded-2xl bg-background/60 backdrop-blur-md border border-border/40 p-10 max-w-sm w-full">
+          <img src="/logo.png" alt="Thumbfast" className="size-16 rounded-xl" />
+          <h1 className="text-2xl font-bold">Thumbfast</h1>
+          <div className="flex flex-col gap-3 w-full">
+            <input
+              type="password"
+              placeholder="Access password"
+              value={passwordInput}
+              onChange={(e) => {
+                setPasswordInput(e.target.value)
+                setAuthError(false)
+              }}
+              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+              className="w-full rounded-lg border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary"
+              autoFocus
+            />
+            {authError && (
+              <p className="text-xs text-destructive">Wrong password</p>
+            )}
+            <Button onClick={handleLogin} className="w-full gap-2">
+              <Lock className="size-4" />
+              Unlock
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
